@@ -1,7 +1,7 @@
 import io
 import zipfile
 
-import fitz  # PyMuPDF: reads and renders PDF pages
+import pymupdf  # reads and renders PDF pages
 from fastapi import HTTPException
 from PIL import Image
 
@@ -15,7 +15,7 @@ DOCX_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg")
 def extract_images(file_type: str, contents: bytes) -> list[Image.Image]:
     """Turn an uploaded file into a list of images the model can look at."""
     if file_type == "image":
-        return [_open_image(contents)]
+        return [read_image(contents)]
     if file_type == "pdf":
         return _images_from_pdf(contents)
     if file_type == "docx":
@@ -23,18 +23,24 @@ def extract_images(file_type: str, contents: bytes) -> list[Image.Image]:
     raise HTTPException(status_code=400, detail="Unsupported file kind.")
 
 
-def _open_image(data: bytes) -> Image.Image:
+def read_image(data: bytes, convert_to_rgb: bool = True) -> Image.Image:
+    """Decode image bytes into a Pillow image.
+
+    convert_to_rgb=True gives a plain RGB picture (fine for most uses).
+    convert_to_rgb=False keeps the original mode, e.g. a PNG with a transparent
+    background, for code (like the verification model) that handles it itself.
+    """
     try:
         image = Image.open(io.BytesIO(data))
         image.load()  # forces Pillow to really decode it, so broken files fail here
-        return image.convert("RGB")
+        return image.convert("RGB") if convert_to_rgb else image
     except Exception:
         raise HTTPException(status_code=400, detail="Could not read the image file.")
 
 
 def _images_from_pdf(data: bytes) -> list[Image.Image]:
     try:
-        document = fitz.open(stream=data, filetype="pdf")
+        document = pymupdf.open(stream=data, filetype="pdf")
     except Exception:
         raise HTTPException(status_code=400, detail="Could not read the PDF file.")
 
@@ -77,4 +83,4 @@ def _images_from_docx(data: bytes) -> list[Image.Image]:
                 detail=f"Document has too many images (max {MAX_DOCX_IMAGES}).",
             )
 
-        return [_open_image(archive.read(name)) for name in image_names]
+        return [read_image(archive.read(name)) for name in image_names]

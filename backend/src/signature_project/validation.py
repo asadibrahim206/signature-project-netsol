@@ -27,7 +27,12 @@ def validate_upload(
     extension = Path(filename or "").suffix.lower()
 
     if extension not in ALLOWED_TYPES:
-        allowed = ", ".join(ALLOWED_TYPES)
+        # Only list the extensions THIS endpoint accepts.
+        allowed = ", ".join(
+            ext
+            for ext, (kind, _) in ALLOWED_TYPES.items()
+            if allowed_kinds is None or kind in allowed_kinds
+        )
         raise HTTPException(
             status_code=415,
             detail=f"Unsupported file type. Allowed types: {allowed}",

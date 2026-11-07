@@ -1,0 +1,62 @@
+frontend/
+# ---------------------------------------------------------------
+# Virtual environment (uv creates it; anyone can rebuild with `uv sync`)
+# ---------------------------------------------------------------
+.venv/
+
+# ---------------------------------------------------------------
+# Python generated files
+# ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# ---------------------------------------------------------------
+# Test and tool caches
+# ---------------------------------------------------------------
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+
+# ---------------------------------------------------------------
+# Secrets and local settings (later: database password, JWT secret key)
+# ---------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------
+# Trained models: large binary files, GitHub rejects files over 100 MB.
+# The folder is ignored, and the extensions catch stray copies elsewhere
+# (for example a sigverify.pt dropped in the project root).
+# ---------------------------------------------------------------
+models/
+*.pt
+*.pth
+*.onnx
+*.ckpt
+*.safetensors
+
+# ---------------------------------------------------------------
+# Downloaded archives and datasets
+# ---------------------------------------------------------------
+*.zip
+datasets/
+
+# ---------------------------------------------------------------
+# Logs
+# ---------------------------------------------------------------
+*.log
+
+# ---------------------------------------------------------------
+# Editor and operating system files
+# ---------------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
