@@ -1,0 +1,30 @@
+# --- Virtual environment (uv creates this; anyone can rebuild it with `uv sync`) ---
+.venv/
+
+# --- Python junk files ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# --- Test and tool caches ---
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+
+# --- Secrets and local settings (database passwords, JWT secret keys) ---
+.env
+.env.*
+!.env.example
+
+# --- Trained model files (large; store them outside git) ---
+models/
+
+# --- Editor and operating system files ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
