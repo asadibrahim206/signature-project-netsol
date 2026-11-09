@@ -4,6 +4,7 @@ from PIL import Image
 
 from signature_project.extraction import read_image
 from signature_project.schemas import VerifyResponse
+from signature_project.verification_service import build_verify_response
 from signature_project.validation import validate_upload
 from signature_project.verifier import SignatureVerifier, get_verifier
 
@@ -42,16 +43,4 @@ async def verify_signature(
     # Running the model is heavy work, so it goes to a separate thread.
     result = await run_in_threadpool(verifier.verify, reference_image, candidate_image)
 
-    if result.is_genuine:
-        verdict = "The signature matches the reference."
-    else:
-        verdict = "The signature does not match the reference."
-
-    return VerifyResponse(
-        reference_filename=reference.filename,
-        candidate_filename=candidate.filename,
-        score=round(result.score, 4),
-        threshold=round(result.threshold, 4),
-        is_genuine=result.is_genuine,
-        verdict=verdict,
-    )
+    return build_verify_response(reference.filename, candidate.filename, result)
