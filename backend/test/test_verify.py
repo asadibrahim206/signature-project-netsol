@@ -59,6 +59,23 @@ def test_non_matching_signature(verify_client, fake_verifier, png_bytes):
     assert body["verdict"] == "The signature does not match the reference."
 
 
+def test_scores_near_the_threshold_keep_their_precision(verify_client, fake_verifier, png_bytes):
+    # Just below the threshold: rounding to 4 decimals would make both look like 0.9993.
+    fake_verifier.score = 0.999321
+    fake_verifier.threshold = 0.999331
+
+    response = post_verify(
+        verify_client,
+        reference=("original.png", png_bytes),
+        candidate=("check.png", png_bytes),
+    )
+
+    body = response.json()
+    assert body["score"] == 0.999321
+    assert body["threshold"] == 0.999331
+    assert body["is_genuine"] is False
+
+
 # ---- what the model receives ------------------------------------------------------
 
 

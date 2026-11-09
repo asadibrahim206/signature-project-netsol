@@ -1,0 +1,35 @@
+# Virtual environments (Do not copy host venv into container)
+.venv/
+venv/
+env/
+
+# Python byte-code and cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Git and GitHub metadata
+.git/
+.gitignore
+.github/
+
+# Testing, coverage, and linting caches
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Docker & local dev files
+Dockerfile
+docker-compose*.yml
+.env
+.env.*
+*.log
+
+# IDE & OS specific files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

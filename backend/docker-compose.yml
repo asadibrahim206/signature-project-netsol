@@ -1,0 +1,98 @@
+# Signature API: Redis (the queue) + API (web server) + worker (does the heavy jobs).
+#
+# Put this file in the backend folder (next to pyproject.toml and uv.lock), with your
+# trained models in ./models :
+#     models/sigverify.pt
+#     models/signature_detector.onnx
+#
+# Start everything:        docker compose up --build
+# Start in the background: docker compose up --build -d
+# Add more workers:        docker compose up -d --scale worker=3
+# See the logs:            docker compose logs -f worker
+# Stop everything:         docker compose down
+#
+# API docs: http://localhost:8000/docs
+#
+# Optional settings: create a file named .env next to this one, for example
+#     SIGDETECT_CONF=0.6
+#     WORKER_CONCURRENCY=4
+
+name: signature-api
+
+# One image, used by both the API and the worker (they run the same code).
+x-backend: &backend
+  image: signature-backend:latest
+  build:
+    context: .
+    # The image recipe lives here, so no separate Dockerfile is needed.
+    # (Do not use a dollar sign inside it: Compose would treat it as a variable.)
+    dockerfile_inline: |
+      FROM python:3.12-slim
+      RUN apt-get update \
+       && apt-get install -y --no-install-recommends libgomp1 libglib2.0-0 \
+       && rm -rf /var/lib/apt/lists/*
+      COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+      ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
+          UV_COMPILE_BYTECODE=1 \
+          UV_LINK_MODE=copy \
+          PYTHONUNBUFFERED=1 \
+          PATH=/opt/venv/bin:/usr/local/bin:/usr/bin:/bin
+      WORKDIR /app
+      COPY pyproject.toml uv.lock README.md ./
+      RUN uv sync --locked --no-dev --no-install-project
+      COPY src ./src
+      RUN uv sync --locked --no-dev
+      RUN useradd --create-home app
+      USER app
+  environment:
+    REDIS_URL: redis://redis:6379/0
+    SIGVERIFY_MODEL_PATH: /app/models/sigverify.pt
+    SIGDETECT_MODEL_PATH: /app/models/signature_detector.onnx
+    SIGDETECT_CONF: ${SIGDETECT_CONF:-0.5}
+    SIGDETECT_NMS: ${SIGDETECT_NMS:-0.45}
+    JOB_TTL_SECONDS: ${JOB_TTL_SECONDS:-3600}
+  volumes:
+    # The models are NOT baked into the image (they are big and private): they are
+    # mounted from your computer, read-only.
+    - ./models:/app/models:ro
+  depends_on:
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  redis:
+    image: redis:7-alpine
+    # appendonly: keep waiting jobs if Redis restarts.
+    # maxmemory + noeviction: when full, Redis refuses NEW jobs (the API then answers
+    # 503) instead of silently deleting jobs that are already waiting.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis-data:/data
+    # Not published to your computer. To reach it from outside, add:
+    # ports: ["127.0.0.1:6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    <<: *backend
+    command: ["uvicorn", "signature_project.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s   # the API loads both models at startup
+
+  worker:
+    <<: *backend
+    command: ["celery", "-A", "signature_project.celery_app", "worker", "--loglevel=info", "--concurrency=${WORKER_CONCURRENCY:-2}"]
+
+volumes:
+  redis-data:

@@ -8,14 +8,17 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "celery[redis]>=5.7.0",
     "fastapi>=0.162.1",
     "numpy>=2.5.4",
+    "opencv-python-headless>=5.0.0.93",
     "pillow>=13.0.0",
     "pydantic>=2.14.3",
     "pymupdf>=2.1",
     "python-multipart>=0.0.33",
     "timm>=1.0.31",
-    "torch>=2.15.0",
+    "torch>=2.2.0",
+    "torchvision>=0.17.0",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -28,6 +31,15 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "fakeredis>=2.40.0",
     "httpx>=0.28.1",
     "pytest>=9.2.0",
 ]
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
